@@ -29,7 +29,7 @@
                 </div>
                 <div class="card-body">
                     <div class="page-content text-center">
-                        <h2 class="pageTitle mb-3">Dashboard Login</h2>
+                        <h2 class="pageTitle mb-3">RENU RENUDashboard Login</h2>
                         <p class="pagePera">Hay, Enter your details to get login to your account</p>
                     </div>
 
