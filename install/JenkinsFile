@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+
+    environment {
+        DEPLOY_USER  = 'ubuntu'
+        DEPLOY_SERVER = '15.206.179.166'
+        DEPLOY_DIR   = '/var/www/html/spacece/install'
+        GIT_BRANCH   = 'main'
+    }
+
+    stages {
+        
+        stage('Deploy to Server') {
+            steps {
+                sshagent (credentials: ['jenkins-ssh-key']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_SERVER} '
+                            # Temporarily change ownership to ubuntu for git operations
+                            sudo chown -R ubuntu:ubuntu /var/www/html/spacece/install &&
+
+                            git config --global --add safe.directory /var/www/html/spacece &&
+                            cd ${DEPLOY_DIR} &&
+                            git pull origin ${GIT_BRANCH} &&
+                            COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction &&
+                            php artisan migrate --force &&
+                            php artisan config:cache &&
+                            php artisan cache:clear &&
+                            php artisan view:clear &&
+
+                            # Restore correct ownership and permissions for Laravel
+                            sudo chown -R www-data:www-data ${DEPLOY_DIR} &&
+                            sudo chmod -R 775 ${DEPLOY_DIR}/storage &&
+                            sudo chmod -R 775 ${DEPLOY_DIR}/bootstrap/cache &&
+
+                            sudo systemctl restart apache2 &&
+                            sudo systemctl restart laravel.service
+                        '
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "Deployment Successful!"
+        }
+        failure {
+            echo "Deployment Failed! Check logs for details."
+        }
+    }
+}
